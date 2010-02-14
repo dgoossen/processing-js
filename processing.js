@@ -1006,7 +1006,7 @@
           g = p.color.getColor(aValue2, greenRange);
           b = p.color.getColor(aValue3, blueRange);
         }
-        aColor = (a << 24) & 0xFF000000 | (r << 16) & 0x00FF0000 | (g << 8) & 0x0000FF00 | (b) & 0x000000FF;
+        aColor = (a << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;
       } else if (typeof aValue1 === "string") {
         aColor = aValue1;
         if (arguments.length === 2) {
@@ -3105,22 +3105,12 @@
 
     p.stroke = function stroke() {
       doStroke = true;
-      var color = p.color.apply(this, arguments)
-      
-      
-      var a = "rgb(" +
-	  ((color & 0x00FF0000)>>>16)	+ "," +
-	  ((color & 0x0000FF00)>>>8)	+ "," + 
-	  ((color & 0x000000FF))		+ "," + 
-	  ((color & 0xFF000000)>>>24)	+ ");";
-	  
-      console.log(a);
-      
-      curContext.strokeStyle = "rgb(" +
-	  ((color & 0x00FF0000)>>>16)	+ "," +
-	  ((color & 0x0000FF00)>>>8)	+ "," + 
-	  ((color & 0x000000FF))		+ "," + 
-	  ((color & 0xFF000000)>>>24)	+ ");";
+      var color = p.color.apply(this, arguments);
+      curContext.strokeStyle = "rgba(" +
+	  ((color & p.RED_MASK)>>>16)	+ "," +
+	  ((color & p.GREEN_MASK)>>>8)	+ "," + 
+	  ((color & p.BLUE_MASK))		+ "," + 
+	  ((color & p.ALPHA_MASK)>>>24)	+ ");";
     };
 
     p.noStroke = function noStroke() {
