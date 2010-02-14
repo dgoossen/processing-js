@@ -990,7 +990,6 @@
 
       var r, g, b, rgb, aColor;
       
-      
       if (arguments.length === 3) {
         aColor = p.color(aValue1, aValue2, aValue3, opacityRange);
       } else if (arguments.length === 4) {
@@ -3106,11 +3105,11 @@
     p.stroke = function stroke() {
       doStroke = true;
       var color = p.color.apply(this, arguments);
-      curContext.strokeStyle = "rgba(" +
-	  ((color & p.RED_MASK)>>>16)	+ "," +
-	  ((color & p.GREEN_MASK)>>>8)	+ "," + 
-	  ((color & p.BLUE_MASK))		+ "," + 
-	  ((color & p.ALPHA_MASK)>>>24)	+ ");";
+      curContext.strokeStyle = "rgba("+
+        ((color & p.RED_MASK)>>>16) +","+
+        ((color & p.GREEN_MASK)>>>8) + "," +
+        ((color & p.BLUE_MASK)) +","+
+        ((color & p.ALPHA_MASK)>>>24) +");";
     };
 
     p.noStroke = function noStroke() {
