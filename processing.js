@@ -987,33 +987,32 @@
     // In case I ever need to do HSV conversion:
     // http://srufaculty.sru.edu/david.dailey/javascript/js/5rml.js
     p.color = function color(aValue1, aValue2, aValue3, aValue4) {
-
+      //console.log(arguments);
+      
       var r, g, b, rgb, aColor;
       
-      if (arguments.length === 3) {
+      if (aValue1 != null && aValue2 != null && aValue3 != null && aValue4 == undefined) {
         aColor = p.color(aValue1, aValue2, aValue3, opacityRange);
-      } else if (arguments.length === 4) {
-        var a = aValue4 / opacityRange;
-        a = isNaN(a) ? 1 : a;
+      } else if (aValue1 != null && aValue2 != null && aValue3 != null && aValue4 != null) {
         if (curColorMode === p.HSB) {
           rgb = p.color.toRGB(aValue1, aValue2, aValue3);
           r = rgb[0];
           g = rgb[1];
           b = rgb[2];
         } else {
-          r = p.color.getColor(aValue1, redRange);
-          g = p.color.getColor(aValue2, greenRange);
-          b = p.color.getColor(aValue3, blueRange);
+          r = Math.round(255 * (aValue1 / redRange));
+          g = Math.round(255 * (aValue2 / greenRange));
+          b = Math.round(255 * (aValue3 / blueRange));
         }
-        aColor = (a << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;
+        aColor = ((isNaN(aValue4) ? 255 : aValue4) << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;
       } else if (typeof aValue1 === "string") {
         aColor = aValue1;
-        if (arguments.length === 2) {
+        if (aValue1 && aValue2) {
           var c = aColor.split(",");
           c[3] = (aValue2 / opacityRange) + ")";
           aColor = c.join(",");
         }
-      } else if (arguments.length === 2) {
+      } else if (aValue1 != null && aValue2 != null && aValue3 == undefined && aValue4 == undefined) {
         aColor = p.color(aValue1, aValue1, aValue1, aValue2);
       } else if (typeof aValue1 === "number" && aValue1 < 256 && aValue1 >= 0) {
         aColor = p.color(aValue1, aValue1, aValue1, opacityRange);
@@ -1064,11 +1063,7 @@
           return [br, p, q];
         }
       }
-    }
-
-    p.color.getColor = function (aValue, range) {
-      return Math.round(255 * (aValue / range));
-    }
+    };
     
     var verifyChannel = function verifyChannel(aColor) {
       if (aColor.constructor === Array) {
@@ -1079,33 +1074,33 @@
     };
 
     p.red = function (aColor) {
-      return parseInt(verifyChannel(aColor).slice(5), 10);
+      return (aColor & p.RED_MASK)>>>16;
     };
     p.green = function (aColor) {
-      return parseInt(verifyChannel(aColor).split(",")[1], 10);
+      return (aColor & p.GREEN_MASK)>>>8;
     };
     p.blue = function (aColor) {
-      return parseInt(verifyChannel(aColor).split(",")[2], 10);
+      return (aColor & p.BLUE_MASK);
     };
     p.alpha = function (aColor) {
-      return parseInt(parseFloat(verifyChannel(aColor).split(",")[3]) * 255, 10);
+      return (aColor & p.ALPHA_MASK)>>>24)/opacityRange;
     };
 
     p.lerpColor = function lerpColor(c1, c2, amt) {
 
       // Get RGBA values for Color 1 to floats
-      var colors1 = p.color(c1).split(",");
-      var r1 = parseInt(colors1[0].split("(")[1], 10);
-      var g1 = parseInt(colors1[1], 10);
-      var b1 = parseInt(colors1[2], 10);
-      var a1 = parseFloat(colors1[3].split(")")[0], 10);
+      var colorBits1 = p.color(c1);
+      var r1 = (colorBits1 & p.RED_MASK)>>>16;
+      var g1 = (colorBits1 & p.GREEN_MASK)>>>8;
+      var b1 = (colorBits1 & p.BLUE_MASK);
+      var a1 = (colorBits1 & p.ALPHA_MASK)>>>24)/opacityRange;
 
       // Get RGBA values for Color 2 to floats
-      var colors2 = p.color(c2).split(",");
-      var r2 = parseInt(colors2[0].split("(")[1], 10);
-      var g2 = parseInt(colors2[1], 10);
-      var b2 = parseInt(colors2[2], 10);
-      var a2 = parseFloat(colors2[3].split(")")[0], 10);
+      var colorBits2 = p.color(c2);
+      var r2 = (colorBits2 & p.RED_MASK)>>>16;
+      var g2 = (colorBits2 & p.GREEN_MASK)>>>8;
+      var b2 = (colorBits2 & p.BLUE_MASK);
+      var a2 = (colorBits2 & p.ALPHA_MASK)>>>24)/opacityRange;
 
       // Return lerp value for each channel, INT for color, Float for Alpha-range
       var r = parseInt(p.lerp(r1, r2, amt), 10);
@@ -1113,9 +1108,7 @@
       var b = parseInt(p.lerp(b1, b2, amt), 10);
       var a = parseFloat(p.lerp(a1, a2, amt), 10);
 
-      var aColor = "rgba(" + r + "," + g + "," + b + "," + a + ")";
-
-      return aColor;
+      return aColor = (a << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;;
     };
 
     // Forced default color mode for #aaaaaa style
@@ -3356,7 +3349,12 @@
 
     p.fill = function fill() {
       doFill = true;
-      curContext.fillStyle = p.color.apply(this, arguments);
+	  var color = p.color(arguments[0],arguments[1],arguments[2],arguments[3]);
+      curContext.fillStyle = "rgba("+
+        ((color & p.RED_MASK)>>>16) +","+
+        ((color & p.GREEN_MASK)>>>8) + "," +
+        ((color & p.BLUE_MASK)) +","+
+        ((color & p.ALPHA_MASK)>>>24)/opacityRange +");";
     };
 
     p.noFill = function noFill() {
@@ -3365,12 +3363,12 @@
 
     p.stroke = function stroke() {
       doStroke = true;
-      var color = p.color.apply(this, arguments);
+      var color = p.color(arguments[0],arguments[1],arguments[2],arguments[3]);
       curContext.strokeStyle = "rgba("+
         ((color & p.RED_MASK)>>>16) +","+
         ((color & p.GREEN_MASK)>>>8) + "," +
         ((color & p.BLUE_MASK)) +","+
-        ((color & p.ALPHA_MASK)>>>24) +");";
+        ((color & p.ALPHA_MASK)>>>24)/opacityRange +");";
     };
 
     p.noStroke = function noStroke() {
@@ -4048,7 +4046,7 @@
           if (img.data && img.data.img) {
             curBackground = img.data;
           } else {
-            curBackground = p.color.apply(this, arguments);
+            curBackground = p.color(arguments[0],arguments[1],arguments[2],arguments[3]);
           }
         }
 
