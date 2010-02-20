@@ -989,58 +989,23 @@
     p.color = function color(aValue1, aValue2, aValue3, aValue4) {
 
       var r, g, b, rgb, aColor;
-
-      // HSB conversion function from Mootools, MIT Licensed
-      function toRGB(h, s, b) {
-        h = (h / redRange) * 360;
-        s = (s / greenRange) * 100;
-        b = (b / blueRange) * 100;
-        var br = Math.round(b / 100 * 255);
-        if (s === 0) {
-          return [br, br, br];
-        } else {
-          var hue = h % 360;
-          var f = hue % 60;
-          var p = Math.round((b * (100 - s)) / 10000 * 255);
-          var q = Math.round((b * (6000 - s * f)) / 600000 * 255);
-          var t = Math.round((b * (6000 - s * (60 - f))) / 600000 * 255);
-          switch (Math.floor(hue / 60)) {
-          case 0:
-            return [br, t, p];
-          case 1:
-            return [q, br, p];
-          case 2:
-            return [p, br, t];
-          case 3:
-            return [p, q, br];
-          case 4:
-            return [t, p, br];
-          case 5:
-            return [br, p, q];
-          }
-        }
-      }
-
-      function getColor(aValue, range) {
-        return Math.round(255 * (aValue / range));
-      }
-
+      
       if (arguments.length === 3) {
         aColor = p.color(aValue1, aValue2, aValue3, opacityRange);
       } else if (arguments.length === 4) {
         var a = aValue4 / opacityRange;
         a = isNaN(a) ? 1 : a;
         if (curColorMode === p.HSB) {
-          rgb = toRGB(aValue1, aValue2, aValue3);
+          rgb = p.color.toRGB(aValue1, aValue2, aValue3);
           r = rgb[0];
           g = rgb[1];
           b = rgb[2];
         } else {
-          r = getColor(aValue1, redRange);
-          g = getColor(aValue2, greenRange);
-          b = getColor(aValue3, blueRange);
+          r = p.color.getColor(aValue1, redRange);
+          g = p.color.getColor(aValue2, greenRange);
+          b = p.color.getColor(aValue3, blueRange);
         }
-        aColor = "rgba(" + r + "," + g + "," + b + "," + a + ")";
+        aColor = (a << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;
       } else if (typeof aValue1 === "string") {
         aColor = aValue1;
         if (arguments.length === 2) {
@@ -1070,6 +1035,41 @@
       return aColor;
     };
 
+    // HSB conversion function from Mootools, MIT Licensed
+    p.color.toRGB = function (h, s, b) {
+      h = (h / redRange) * 360;
+      s = (s / greenRange) * 100;
+      b = (b / blueRange) * 100;
+      var br = Math.round(b / 100 * 255);
+      if (s === 0) {
+        return [br, br, br];
+      } else {
+        var hue = h % 360;
+        var f = hue % 60;
+        var p = Math.round((b * (100 - s)) / 10000 * 255);
+        var q = Math.round((b * (6000 - s * f)) / 600000 * 255);
+        var t = Math.round((b * (6000 - s * (60 - f))) / 600000 * 255);
+        switch (Math.floor(hue / 60)) {
+        case 0:
+          return [br, t, p];
+        case 1:
+          return [q, br, p];
+        case 2:
+          return [p, br, t];
+        case 3:
+          return [p, q, br];
+        case 4:
+          return [t, p, br];
+        case 5:
+          return [br, p, q];
+        }
+      }
+    }
+
+    p.color.getColor = function (aValue, range) {
+      return Math.round(255 * (aValue / range));
+    }
+    
     var verifyChannel = function verifyChannel(aColor) {
       if (aColor.constructor === Array) {
         return aColor;
@@ -3365,7 +3365,12 @@
 
     p.stroke = function stroke() {
       doStroke = true;
-      curContext.strokeStyle = p.color.apply(this, arguments);
+      var color = p.color.apply(this, arguments);
+      curContext.strokeStyle = "rgba("+
+        ((color & p.RED_MASK)>>>16) +","+
+        ((color & p.GREEN_MASK)>>>8) + "," +
+        ((color & p.BLUE_MASK)) +","+
+        ((color & p.ALPHA_MASK)>>>24) +");";
     };
 
     p.noStroke = function noStroke() {
