@@ -1007,7 +1007,7 @@
         aColor = ((isNaN(aValue4) ? 255 : aValue4) << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;
       } else if (typeof aValue1 === "string") {
         aColor = aValue1;
-        if (aValue1 && aValue2) {
+        if (aValue2 && aValue4 == null && aValue4 == null) {
           var c = aColor.split(",");
           c[3] = (aValue2 / opacityRange) + ")";
           aColor = c.join(",");
@@ -1083,7 +1083,7 @@
       return (aColor & p.BLUE_MASK);
     };
     p.alpha = function (aColor) {
-      return (aColor & p.ALPHA_MASK)>>>24)/opacityRange;
+      return ((aColor & p.ALPHA_MASK)>>>24)/opacityRange;
     };
 
     p.lerpColor = function lerpColor(c1, c2, amt) {
@@ -1093,14 +1093,14 @@
       var r1 = (colorBits1 & p.RED_MASK)>>>16;
       var g1 = (colorBits1 & p.GREEN_MASK)>>>8;
       var b1 = (colorBits1 & p.BLUE_MASK);
-      var a1 = (colorBits1 & p.ALPHA_MASK)>>>24)/opacityRange;
+      var a1 = ((colorBits1 & p.ALPHA_MASK)>>>24)/opacityRange;
 
       // Get RGBA values for Color 2 to floats
       var colorBits2 = p.color(c2);
       var r2 = (colorBits2 & p.RED_MASK)>>>16;
       var g2 = (colorBits2 & p.GREEN_MASK)>>>8;
       var b2 = (colorBits2 & p.BLUE_MASK);
-      var a2 = (colorBits2 & p.ALPHA_MASK)>>>24)/opacityRange;
+      var a2 = ((colorBits2 & p.ALPHA_MASK)>>>24)/opacityRange;
 
       // Return lerp value for each channel, INT for color, Float for Alpha-range
       var r = parseInt(p.lerp(r1, r2, amt), 10);
@@ -1108,7 +1108,7 @@
       var b = parseInt(p.lerp(b1, b2, amt), 10);
       var a = parseFloat(p.lerp(a1, a2, amt), 10);
 
-      return aColor = (a << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;;
+      return (a << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;;
     };
 
     // Forced default color mode for #aaaaaa style
