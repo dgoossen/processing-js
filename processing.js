@@ -1348,6 +1348,7 @@
         curContext.clear(curContext.COLOR_BUFFER_BIT | curContext.DEPTH_BUFFER_BIT);
         p.camera();
         p.draw();
+        renderLines();
       } else {
         p.pushMatrix();
         p.draw();
@@ -3669,8 +3670,21 @@
 
     };
 
+    var lines = [];
+
     p.line = function line(x1, y1, x2, y2) {
       if (p.use3DContext) {
+        var x1 = arguments[0], y1 = arguments[1], z1 = arguments[2],
+            x2 = arguments[3], y2 = arguments[4], z2 = arguments[5];
+
+        lines.push(x1);
+        lines.push(y1);
+        lines.push(z1);
+        lines.push(x2);
+        lines.push(y2);
+        lines.push(z2);
+
+        /*
         var x1 = arguments[0], y1 = arguments[1], z1 = arguments[2],
             x2 = arguments[3], y2 = arguments[4], z2 = arguments[5];
         
@@ -3691,12 +3705,33 @@
 
         curContext.bufferData(curContext.ARRAY_BUFFER, newWebGLArray(lineVerts),curContext.STREAM_DRAW);
         curContext.drawArrays(curContext.LINES, 0, 2);
+        */
       } else {
         curContext.beginPath();
         curContext.moveTo(x1 || 0, y1 || 0);
         curContext.lineTo(x2 || 0, y2 || 0);
         curContext.stroke();
         curContext.closePath();
+      }
+    };
+
+    var renderLines = function() {
+      if (lines.length > 0) {
+        var model = new PMatrix3D();
+
+        var view = new PMatrix3D();
+        view.scale(1, -1 , 1);
+        view.apply(modelView.array());
+
+        uniformMatrix(programObject , "model" , true,  model.array());
+        uniformMatrix(programObject , "view" , true , view.array());
+        uniformMatrix(programObject , "projection" , true , projection.array());
+        uniformf(programObject, "color", [0,0,0,1]);
+        vertexAttribPointer(programObject , "Vertex", 3 , lineBuffer);
+
+        curContext.bufferData(curContext.ARRAY_BUFFER, newWebGLArray(lines),curContext.STREAM_DRAW);
+        curContext.drawArrays(curContext.LINES, 0, lines.length/3);
+        lines = [];
       }
     };
 
