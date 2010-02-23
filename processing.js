@@ -1033,7 +1033,21 @@
       }
       return aColor;
     };
-
+    
+    // Ease of use function to extract the colour bits into a string
+    p.color.toString = function(colorInt) {
+      return "rgba("+
+        ((colorInt & p.RED_MASK)>>>16) +","+
+        ((colorInt & p.GREEN_MASK)>>>8) + "," +
+        ((colorInt & p.BLUE_MASK)) +","+
+        ((colorInt & p.ALPHA_MASK)>>>24)/opacityRange +");";
+    };
+    
+    // Easy of use function to pack rgba values into a single bit-shifted color int.
+    p.color.toColorInt = function (r, g, b, a) {
+      return (a << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;
+    };
+    
     // HSB conversion function from Mootools, MIT Licensed
     p.color.toRGB = function (h, s, b) {
       h = (h / redRange) * 360;
@@ -1108,7 +1122,7 @@
       var b = parseInt(p.lerp(b1, b2, amt), 10);
       var a = parseFloat(p.lerp(a1, a2, amt), 10);
 
-      return (a << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;;
+      return p.color.toColorInt(r, g, b, a);
     };
 
     // Forced default color mode for #aaaaaa style
@@ -1117,7 +1131,7 @@
       curColorMode = p.RGB;
       var c = p.color(aValue1 / 255 * redRange, aValue2 / 255 * greenRange, aValue3 / 255 * blueRange);
       curColorMode = tmpColorMode;
-      return c;
+      return p.color.toString(c);
     };
 
     p.colorMode = function colorMode(mode, range1, range2, range3, range4) {
@@ -3346,11 +3360,7 @@
     p.fill = function fill() {
       doFill = true;
 	  var color = p.color(arguments[0],arguments[1],arguments[2],arguments[3]);
-      curContext.fillStyle = "rgba("+
-        ((color & p.RED_MASK)>>>16) +","+
-        ((color & p.GREEN_MASK)>>>8) + "," +
-        ((color & p.BLUE_MASK)) +","+
-        ((color & p.ALPHA_MASK)>>>24)/opacityRange +");";
+      curContext.fillStyle = p.color.toString(color);
     };
 
     p.noFill = function noFill() {
@@ -3360,11 +3370,7 @@
     p.stroke = function stroke() {
       doStroke = true;
       var color = p.color(arguments[0],arguments[1],arguments[2],arguments[3]);
-      curContext.strokeStyle = "rgba("+
-        ((color & p.RED_MASK)>>>16) +","+
-        ((color & p.GREEN_MASK)>>>8) + "," +
-        ((color & p.BLUE_MASK)) +","+
-        ((color & p.ALPHA_MASK)>>>24)/opacityRange +");";
+      curContext.strokeStyle = p.color.toString(color);
     };
 
     p.noStroke = function noStroke() {
@@ -3934,12 +3940,13 @@
 
         p.image(obj, x, y);
 
+      // This is a bitshifted color int
       } else {
 
         var oldFill = curContext.fillStyle,
           color = obj;
 
-        curContext.fillStyle = color;
+        curContext.fillStyle = p.color.toString(color);
         curContext.fillRect(Math.round(x), Math.round(y), 1, 1);
         curContext.fillStyle = oldFill;
 
@@ -4050,7 +4057,7 @@
           p.image(img, 0, 0);
         } else {
           var oldFill = curContext.fillStyle;
-          curContext.fillStyle = curBackground + "";
+          curContext.fillStyle = p.color.toString(curBackground);
           curContext.fillRect(0, 0, p.width, p.height);
           curContext.fillStyle = oldFill;
         }
