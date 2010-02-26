@@ -1053,7 +1053,11 @@
           aColor = c.join(",");
         }
       } else if (aValue1 != null && aValue2 != null && aValue3 == undefined && aValue4 == undefined) {
-        aColor = p.color(aValue1, aValue1, aValue1, aValue2);
+        if ( (aValue1 & p.ALPHA_MASK) ) { // colorInt and opacity
+          aColor = p.color(p.red(aValue1), p.green(aValue1), p.blue(aValue1), aValue2);
+        } else { // grayscale and alpha
+          aColor = p.color(aValue1, aValue1, aValue1, aValue2);
+        }
       } else if (typeof aValue1 === "number" && aValue1 < 256 && aValue1 >= 0) {
         aColor = p.color(aValue1, aValue1, aValue1, opacityRange);
       } else if (typeof aValue1 === "number") {
@@ -4441,7 +4445,6 @@
       }
 
       return getLoaded.get(x, y);
-
     };
 
     // Creates a new Processing instance and passes it back for... processing
