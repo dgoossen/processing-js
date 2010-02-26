@@ -352,7 +352,7 @@
     // Convert #aaaaaa into color
     aCode = aCode.replace(/#([a-f0-9]{6})/ig, function (m, hex) {
       var num = toNumbers(hex);
-      return "DefaultColor(" + num[0] + "," + num[1] + "," + num[2] + ")";
+      return "defaultColor(" + num[0] + "," + num[1] + "," + num[2] + ")";
     });
 
     // Convert 3.0f to just 3.0
@@ -1029,68 +1029,30 @@
     // In case I ever need to do HSV conversion:
     // http://srufaculty.sru.edu/david.dailey/javascript/js/5rml.js
     p.color = function color(aValue1, aValue2, aValue3, aValue4) {
-
       var r, g, b, rgb, aColor;
-
-      // HSB conversion function from Mootools, MIT Licensed
-      function toRGB(h, s, b) {
-        h = (h / redRange) * 360;
-        s = (s / greenRange) * 100;
-        b = (b / blueRange) * 100;
-        var br = Math.round(b / 100 * 255);
-        if (s === 0) {
-          return [br, br, br];
-        } else {
-          var hue = h % 360;
-          var f = hue % 60;
-          var p = Math.round((b * (100 - s)) / 10000 * 255);
-          var q = Math.round((b * (6000 - s * f)) / 600000 * 255);
-          var t = Math.round((b * (6000 - s * (60 - f))) / 600000 * 255);
-          switch (Math.floor(hue / 60)) {
-          case 0:
-            return [br, t, p];
-          case 1:
-            return [q, br, p];
-          case 2:
-            return [p, br, t];
-          case 3:
-            return [p, q, br];
-          case 4:
-            return [t, p, br];
-          case 5:
-            return [br, p, q];
-          }
-        }
-      }
-
-      function getColor(aValue, range) {
-        return Math.round(255 * (aValue / range));
-      }
-
-      if (arguments.length === 3) {
+      
+      if (aValue1 !== null && aValue2 != null && aValue3 != null && aValue4 == undefined) {
         aColor = p.color(aValue1, aValue2, aValue3, opacityRange);
-      } else if (arguments.length === 4) {
-        var a = aValue4 / opacityRange;
-        a = isNaN(a) ? 1 : a;
+      } else if (aValue1 != null && aValue2 != null && aValue3 != null && aValue4 != null) {
         if (curColorMode === p.HSB) {
-          rgb = toRGB(aValue1, aValue2, aValue3);
+          rgb = p.color.toRGB(aValue1, aValue2, aValue3);
           r = rgb[0];
           g = rgb[1];
           b = rgb[2];
         } else {
-          r = getColor(aValue1, redRange);
-          g = getColor(aValue2, greenRange);
-          b = getColor(aValue3, blueRange);
+          r = Math.round(255 * (aValue1 / redRange));
+          g = Math.round(255 * (aValue2 / greenRange));
+          b = Math.round(255 * (aValue3 / blueRange));
         }
-        aColor = "rgba(" + r + "," + g + "," + b + "," + a + ")";
+        aColor = ((isNaN(aValue4) ? 255 : aValue4) << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;
       } else if (typeof aValue1 === "string") {
         aColor = aValue1;
-        if (arguments.length === 2) {
+        if (aValue2 && aValue4 == null && aValue4 == null) {
           var c = aColor.split(",");
           c[3] = (aValue2 / opacityRange) + ")";
           aColor = c.join(",");
         }
-      } else if (arguments.length === 2) {
+      } else if (aValue1 != null && aValue2 != null && aValue3 == undefined && aValue4 == undefined) {
         aColor = p.color(aValue1, aValue1, aValue1, aValue2);
       } else if (typeof aValue1 === "number" && aValue1 < 256 && aValue1 >= 0) {
         aColor = p.color(aValue1, aValue1, aValue1, opacityRange);
@@ -1111,7 +1073,56 @@
       }
       return aColor;
     };
+    
+    // Ease of use function to extract the colour bits into a string
+    p.color.toString = function(colorInt) {
+      return "rgba("+
+        ((colorInt & p.RED_MASK)>>>16) +","+
+        ((colorInt & p.GREEN_MASK)>>>8) + "," +
+        ((colorInt & p.BLUE_MASK)) +","+
+        ((colorInt & p.ALPHA_MASK)>>>24)/opacityRange +");";
+    };
+    
+    // Easy of use function to pack rgba values into a single bit-shifted color int.
+    p.color.toColorInt = function (r, g, b, a) {
+      return (a << 24) & p.ALPHA_MASK | (r << 16) & p.RED_MASK | (g << 8) & p.GREEN_MASK | b & p.BLUE_MASK;
+    };
 
+    p.color.glArray = function (colorInt) {
+      return [((colorInt & p.RED_MASK)>>>16)/redRange, ((colorInt & p.GREEN_MASK)>>>8)/greenRange, (colorInt & p.BLUE_MASK)/blueRange, ((colorInt & p.ALPHA_MASK)>>>24)/opacityRange];
+    };
+    
+    // HSB conversion function from Mootools, MIT Licensed
+    p.color.toRGB = function (h, s, b) {
+      h = (h / redRange) * 360;
+      s = (s / greenRange) * 100;
+      b = (b / blueRange) * 100;
+      var br = Math.round(b / 100 * 255);
+      if (s === 0) {
+        return [br, br, br];
+      } else {
+        var hue = h % 360;
+        var f = hue % 60;
+        var p = Math.round((b * (100 - s)) / 10000 * 255);
+        var q = Math.round((b * (6000 - s * f)) / 600000 * 255);
+        var t = Math.round((b * (6000 - s * (60 - f))) / 600000 * 255);
+        switch (Math.floor(hue / 60)) {
+        case 0:
+          return [br, t, p];
+        case 1:
+          return [q, br, p];
+        case 2:
+          return [p, br, t];
+        case 3:
+          return [p, q, br];
+        case 4:
+          return [t, p, br];
+        case 5:
+          return [br, p, q];
+        }
+      }
+    };
+    
     var verifyChannel = function verifyChannel(aColor) {
       if (aColor.constructor === Array) {
         return aColor;
@@ -1121,33 +1132,33 @@
     };
 
     p.red = function (aColor) {
-      return parseInt(verifyChannel(aColor).slice(5), 10);
+      return (aColor & p.RED_MASK)>>>16;
     };
     p.green = function (aColor) {
-      return parseInt(verifyChannel(aColor).split(",")[1], 10);
+      return (aColor & p.GREEN_MASK)>>>8;
     };
     p.blue = function (aColor) {
-      return parseInt(verifyChannel(aColor).split(",")[2], 10);
+      return (aColor & p.BLUE_MASK);
     };
     p.alpha = function (aColor) {
-      return parseInt(parseFloat(verifyChannel(aColor).split(",")[3]) * 255, 10);
+      return ((aColor & p.ALPHA_MASK)>>>24)/opacityRange;
     };
 
     p.lerpColor = function lerpColor(c1, c2, amt) {
 
       // Get RGBA values for Color 1 to floats
-      var colors1 = p.color(c1).split(",");
-      var r1 = parseInt(colors1[0].split("(")[1], 10);
-      var g1 = parseInt(colors1[1], 10);
-      var b1 = parseInt(colors1[2], 10);
-      var a1 = parseFloat(colors1[3].split(")")[0], 10);
+      var colorBits1 = p.color(c1);
+      var r1 = (colorBits1 & p.RED_MASK)>>>16;
+      var g1 = (colorBits1 & p.GREEN_MASK)>>>8;
+      var b1 = (colorBits1 & p.BLUE_MASK);
+      var a1 = ((colorBits1 & p.ALPHA_MASK)>>>24)/opacityRange;
 
       // Get RGBA values for Color 2 to floats
-      var colors2 = p.color(c2).split(",");
-      var r2 = parseInt(colors2[0].split("(")[1], 10);
-      var g2 = parseInt(colors2[1], 10);
-      var b2 = parseInt(colors2[2], 10);
-      var a2 = parseFloat(colors2[3].split(")")[0], 10);
+      var colorBits2 = p.color(c2);
+      var r2 = (colorBits2 & p.RED_MASK)>>>16;
+      var g2 = (colorBits2 & p.GREEN_MASK)>>>8;
+      var b2 = (colorBits2 & p.BLUE_MASK);
+      var a2 = ((colorBits2 & p.ALPHA_MASK)>>>24)/opacityRange;
 
       // Return lerp value for each channel, INT for color, Float for Alpha-range
       var r = parseInt(p.lerp(r1, r2, amt), 10);
@@ -1155,17 +1166,16 @@
       var b = parseInt(p.lerp(b1, b2, amt), 10);
       var a = parseFloat(p.lerp(a1, a2, amt), 10);
 
-      var aColor = "rgba(" + r + "," + g + "," + b + "," + a + ")";
-
-      return aColor;
+      return p.color.toColorInt(r, g, b, a);
     };
 
     // Forced default color mode for #aaaaaa style
-    p.DefaultColor = function (aValue1, aValue2, aValue3) {
+    p.defaultColor = function (aValue1, aValue2, aValue3) {
       var tmpColorMode = curColorMode;
       curColorMode = p.RGB;
       var c = p.color(aValue1 / 255 * redRange, aValue2 / 255 * greenRange, aValue3 / 255 * blueRange);
       curColorMode = tmpColorMode;
+
       return c;
     };
 
@@ -3478,8 +3488,7 @@
           // developers can start playing around with styles. 
           curContext.enable( curContext.POLYGON_OFFSET_FILL );
           curContext.polygonOffset( 1, 1 );
-          var c = fillStyle.slice( 5, -1 ).split( "," );
-          uniformf(programObject, "color", [ c[0]/255, c[1]/255, c[2]/255, c[3] ] );
+          uniformf(programObject, "color", p.color.glArray(fillStyle));
           vertexAttribPointer( programObject, "Vertex", 3 , boxBuffer );
           curContext.drawArrays( curContext.TRIANGLES, 0 , boxVerts.length/3 );
           curContext.disable( curContext.POLYGON_OFFSET_FILL );
@@ -3487,8 +3496,7 @@
 
         if( lineWidth > 0 && doStroke ) {
           // eventually need to make this more efficient.
-          var c = strokeStyle.slice( 5, -1 ).split( "," );
-          uniformf(programObject, "color", [ c[0]/255, c[1]/255, c[2]/255, c[3] ] );
+          uniformf(programObject, "color", p.color.glArray(strokeStyle) );
           curContext.lineWidth( lineWidth );
           vertexAttribPointer( programObject , "Vertex", 3 , boxOutlineBuffer );
           curContext.drawArrays( curContext.LINES, 0 , boxOutlineVerts.length/3 );
@@ -3698,8 +3706,7 @@
           // developers can start playing around with styles. 
           curContext.enable( curContext.POLYGON_OFFSET_FILL );
           curContext.polygonOffset( 1, 1 );
-          var c = fillStyle.slice( 5, -1 ).split( "," );
-          uniformf(programObject, "color", [ c[0]/255, c[1]/255, c[2]/255, c[3] ] );
+          uniformf(programObject, "color", p.color.glArray(fillStyle));
 
           curContext.drawArrays( curContext.TRIANGLE_STRIP, 0 , sphereVerts.length/3 );
           curContext.disable( curContext.POLYGON_OFFSET_FILL );
@@ -3707,8 +3714,7 @@
 
         if( lineWidth > 0 && doStroke ) {
           // eventually need to make this more efficient.
-          var c = strokeStyle.slice( 5, -1 ).split( "," );
-          uniformf(programObject, "color", [ c[0]/255, c[1]/255, c[2]/255, c[3] ] );
+          uniformf(programObject, "color", p.color.glArray(strokeStyle) );
 
           curContext.lineWidth( lineWidth );
           curContext.drawArrays( curContext.LINE_STRIP, 0 , sphereVerts.length/3 );
@@ -3770,11 +3776,13 @@
 
     p.fill = function fill() {
       doFill = true;
+      
+      var color = p.color(arguments[0], arguments[1], arguments[2], arguments[3]);
+
       if( p.use3DContext ) {
-        fillStyle = p.color.apply(this, arguments);
-      }
-      else {
-        curContext.fillStyle = p.color.apply(this, arguments);
+        fillStyle = color;
+      } else {
+        curContext.fillStyle = p.color.toString(color);
       }
     };
 
@@ -3784,11 +3792,13 @@
 
     p.stroke = function stroke() {
       doStroke = true;
+
+      var color = p.color(arguments[0], arguments[1], arguments[2], arguments[3]);
+
       if( p.use3DContext ) {
-        strokeStyle = p.color.apply(this, arguments);
-      }
-      else {
-        curContext.strokeStyle = p.color.apply(this, arguments);
+        strokeStyle = color;
+      } else {
+        curContext.strokeStyle = p.color.toString(color);
       }
     };
 
@@ -3853,8 +3863,7 @@
 
         if( lineWidth > 0 && doStroke ) {
           // this will be replaced with the new bit shifting color code
-          var c = strokeStyle.slice(5, -1).split(",");
-          uniformf(programObject, "color", [c[0]/255, c[1]/255, c[2]/255, c[3]]);
+          uniformf(programObject, "color", p.color.glArray(strokeStyle));
 
           vertexAttribPointer(programObject, "Vertex", 3, pointBuffer);
           curContext.drawArrays(curContext.POINTS, 0, 1);
@@ -4136,8 +4145,7 @@
 
         if( lineWidth > 0 && doStroke ) {
           // this will be replaced with the new bit shifting color code
-          var c = strokeStyle.slice(5, -1).split(",");
-          uniformf(programObject, "color", [c[0]/255, c[1]/255, c[2]/255, c[3]]);
+          uniformf(programObject, "color", p.color.glArray(strokeStyle));
 
           curContext.lineWidth(lineWidth);
 
@@ -4454,12 +4462,13 @@
 
         p.image(obj, x, y);
 
+      // This is a bitshifted color int
       } else {
 
         var oldFill = curContext.fillStyle,
           color = obj;
 
-        curContext.fillStyle = color;
+        curContext.fillStyle = p.color.toString(color);
         curContext.fillRect(Math.round(x), Math.round(y), 1, 1);
         curContext.fillStyle = oldFill;
 
@@ -4474,9 +4483,7 @@
 
     // Draws a 1-Dimensional pixel array to Canvas
     p.updatePixels = function () {
-
-      var colors = /(\d+),(\d+),(\d+),(\d+)/,
-        pixels = {};
+      var pixels = {};
 
       pixels.width = p.width;
       pixels.height = p.height;
@@ -4490,20 +4497,17 @@
         pos = 0;
 
       for (var i = 0, l = p.pixels.length; i < l; i++) {
+        var c = p.pixels[i] || p.color(0);
 
-        var c = (p.pixels[i] || "rgba(0,0,0,1)").match(colors);
-
-        data[pos + 0] = parseInt(c[1], 10);
-        data[pos + 1] = parseInt(c[2], 10);
-        data[pos + 2] = parseInt(c[3], 10);
-        data[pos + 3] = parseFloat(c[4]) * 255;
+        data[pos + 0] = p.red(c);
+        data[pos + 1] = p.green(c);
+        data[pos + 2] = p.blue(c);
+        data[pos + 3] = p.alpha(c) * 255; 
 
         pos += 4;
-
       }
 
       curContext.putImageData(pixels, 0, 0);
-
     };
 
     // Draw an image or a color to the background
@@ -4524,25 +4528,25 @@
 
             // if 3 component color was passed in, alpha will be 1
             // otherwise it will already be normalized.
-            curContext.clearColor(c[0] / 255, c[1] / 255, c[2] / 255, c[3]);
+            curContext.clearColor(c[0] / redRange, c[1] / greenRange, c[2] / blueRange, c[3]);
           }
 
           // user passes in value which ranges from 0-255, but opengl
           // wants a normalized value.
           else if (typeof arguments[0] === "number") {
-            curContext.clearColor(col[0] / 255, col[0] / 255, col[0] / 255, 1.0 );
+            curContext.clearColor(col[0] / redRange, col[0] / greenRange, col[0] / blueRange, 1.0 );
           }
         } else if (arguments.length === 2) {
           if (typeof arguments[0] === "string") {
             c = arguments[0].slice(5, -1).split(",");
             // Processing is ignoring alpha
             // var a = arguments[0]/255;
-            curContext.clearColor(c[0] / 255, c[1] / 255, c[2] / 255, 1.0);
+            curContext.clearColor(c[0] / redRange, c[1] / greenRange, c[2] / blueRange, 1.0);
           }
           // first value is shade of gray, second is alpha
           // background(0,255);
           else if (typeof arguments[0] === "number") {
-            c = arguments[0] / 255;
+            c = arguments[0] / redRange;
 
             // Processing is ignoring alpha
             // var a = arguments[0]/255;
@@ -4555,14 +4559,14 @@
         else if (arguments.length === 3 || arguments.length === 4) {
           // Processing seems to ignore this value, so just use 1.0 instead.
           //var a = arguments.length === 3? 1.0: arguments[3]/255;
-          curContext.clearColor(col[0] / 255, col[1] / 255, col[2] / 255, 1);
+          curContext.clearColor(col[0] / redRange, col[1] / greenRange, col[2] / blueRange, 1);
         }
       } else { // 2d context
         if (arguments.length) {
           if (img.data && img.data.img) {
             curBackground = img.data;
           } else {
-            curBackground = p.color.apply(this, arguments);
+            curBackground = p.color(arguments[0],arguments[1],arguments[2],arguments[3]);
           }
         }
 
@@ -4570,7 +4574,7 @@
           p.image(img, 0, 0);
         } else {
           var oldFill = curContext.fillStyle;
-          curContext.fillStyle = curBackground + "";
+          curContext.fillStyle = p.color.toString(curBackground);
           curContext.fillRect(0, 0, p.width, p.height);
           curContext.fillStyle = oldFill;
         }
