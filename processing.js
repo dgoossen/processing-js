@@ -3778,6 +3778,27 @@
     // Style functions
     ////////////////////////////////////////////////////////////////////////////
 
+    var MultiContextFunction = function(context2d, context3d) {
+      if ( p.use3DContext ) {
+        return context3d;
+      } else {
+        return context2d;
+      }
+    };
+
+    p.stroke = new MultiContextFunction(
+      function() {
+        var color = p.color(arguments[0], arguments[1], arguments[2], arguments[3]);
+        doStroke = true;
+        curContext.strokeStyle = p.color.toString(color);
+      },
+      function() {
+        var color = p.color(a1, a2, a3, a4);
+        doStroke = true;
+        strokeStyle = color;
+      }
+    );
+ 
     p.fill = function fill() {
       doFill = true;
       
@@ -3794,15 +3815,51 @@
       doFill = false;
     };
 
+    /*
     p.stroke = function stroke() {
-      doStroke = true;
-
-      var color = p.color(arguments[0], arguments[1], arguments[2], arguments[3]);
-
+      delete p.stroke;
       if( p.use3DContext ) {
-        strokeStyle = color;
+        p.stroke = function(a1, a2, a3, a4) {
+          var color = p.color(a1, a2, a3, a4);
+          doStroke = true;
+          strokeStyle = color;
+        };
       } else {
+        p.stroke = function() {
+          var color = p.color(arguments[0], arguments[1], arguments[2], arguments[3]);
+          doStroke = true;
+          curContext.strokeStyle = p.color.toString(color);
+        };
+      }
+      context("3d", function() {
+        var color = p.color(arguments[0], arguments[1], arguments[2], arguments[3]);
+        doStroke = true;
+        strokeStyle = color;
+      });
+
+      context("2d", function() {
+        var color = p.color(arguments[0], arguments[1], arguments[2], arguments[3]);
+        doStroke = true;
         curContext.strokeStyle = p.color.toString(color);
+      });
+    };
+    */
+
+    var context = function(ctx, func) {
+      if ( arguments.length === 2 ) {
+        if ( ctx === "3d" && p.use3DContext ) {
+          arguments.callee.caller = func;
+        } else if ( ctx === "2d" && !p.use3DContext ) {
+          arguments.callee.caller = func;
+        }
+      } else if ( arguments.length === 1 ) {
+        if ( ctx === "3d" && p.use3DContext ) {
+          return true;
+        } else if ( ctx === "2d" && !p.use3DContext ) {
+          return true;
+        } else {
+          return false;
+        }
       }
     };
 
