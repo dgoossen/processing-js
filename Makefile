@@ -19,11 +19,11 @@ release-files: pretty yui example release-docs
 
 zipped: release-files
 	gzip -c ./release/processing-$(VERSION).min.js > ./release/processing-$(VERSION).min.js.gz
-	find ./release -print | zip -j ./release/processing.js-$(VERSION).zip -@
+	find ./release -print | zip -j ./release/processing-js-$(VERSION).zip -@
 
 release-docs: create-release
 	cp AUTHORS ./release
-	cp README ./release
+	cat README | sed -e 's/@VERSION@/$(VERSION)/' > ./release/README
 	cp LICENSE ./release
 	cp CHANGELOG ./release
 
@@ -36,6 +36,7 @@ pretty: create-release
 	$(TOOLSDIR)/jsbeautify.py $(JSSHELL) processing.js > ./release/processing-$(VERSION).js
 # check for any parsing errors in pretty version of processing.js
 	$(JSSHELL) -f $(TOOLSDIR)/fake-dom.js -f ./release/processing-$(VERSION).js
+	cat ./release/processing-$(VERSION).js | sed -e 's/@VERSION@/$(VERSION)/' > ./release/processing-$(VERSION).js
 
 packed: create-release
 	$(TOOLSDIR)/packer.py $(JSSHELL) processing.js > ./release/processing-$(VERSION).packed.js
