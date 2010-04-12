@@ -434,7 +434,7 @@
               img.src = imageName;
             }
           } else if (key === "opaque") {
-            p.canvas.mozOpaque = value === "true";
+            p.canvasElement.mozOpaque = value === "true";
           } else {
             p.pjs[key] = value;
           }
@@ -472,7 +472,11 @@
       if (name === "if" || name === "for" || name === "while") {
         return all;
       } else {
-        return "processing." + name + " = function " + name + args;
+        if (name === 'setup' || name === 'draw') {
+          return "processing." + name + " = function " + name + args;
+        } else {
+          return "var " + name + " = processing." + name + " = function " + name + args;
+        }
       }
     });
 
@@ -562,16 +566,19 @@
         return "";
       });
 
-
-      // Move arguments up from constructor and wrap contents with
-      // a with(this), and unwrap constructor
-      return "function " + name + "() {with(this){\n " + 
+      // Move arguments up from constructor.
+      return "function " + name + "() {\n " +
               (extend ? "var __self=this;function superMethod(){extendClass(__self,arguments," + extend + ");}\n" : "") +
               // Replace var foo = 0; with this.foo = 0;
               // and force var foo; to become this.foo = null;
-              vars.replace(/\s*,\s*/g, ";\n  this.").replace(/\b(var |final |public )+\s*/g, "this.").replace(/\b(var |final |public )+\s*/g, "this.").replace(/this\.(\w+);/g, "this.$1 = null;") + 
-              (extend ? "extendClass(this, " + extend + ");\n" : "") + 
-              "<CLASS " + name + " " + staticVar + ">" + 
+              vars.replace(/\b(final|public)\b/g, '')
+                  .replace(/\s*,\s*/g, ";\n var ")
+				  .replace(/this\.(\w+);/g, "this.$1 = null;")
+                  .replace(/var\s*?(\w+)([^;]*?;)/g, "this.$1$2\n" + 
+				      "__defineGetter__('$1', (function(obj) { return function()  { return obj.$1; };})(this));\n" +
+					  "__defineSetter__('$1', (function(obj) { return function(x) { obj.$1 = x;    };})(this));\n") +
+              (extend ? "extendClass(this, " + extend + ");\n" : "") +
+              "<CLASS " + name + " " + staticVar + ">" +
               (typeof last === "string" ? last : name + "(");
     };
 
@@ -644,21 +651,21 @@
         });
       }());
 
-      var matchMethod = /ADDMETHOD([\s\S]*?\{)/, mc, methods = "";
-
+//["var move = ADDMETHOD(this, 'move', function() {", "var move = ", "(this, '", "move", "', function() {"]
+      var matchMethod = /(var \w+ = )?ADDMETHOD([^,]+, \s*?')([^']*)('[\s\S]*?\{)/, mc, methods = "";
       while ((mc = rest.match(matchMethod))) {
         var prev = RegExp.leftContext,
           allNext = RegExp.rightContext,
           next = nextBrace(allNext);
 
-        methods += "addMethod" + mc[1] + next + "});";
+        methods += "addMethod" + mc[2] + mc[3] + mc[4] + next + "});" + (mc[1] ? mc[1] + 'this.' + mc[3] + ';\n' : '');
 
         rest = prev + allNext.slice(next.length + 1);
       }
 
       rest = methods + rest;
 
-      aCode = left + rest + "\n}}" + staticVars + allRest;
+      aCode = left + rest + "\n}" + staticVars + allRest;
     }
 
     // Do some tidying up, where necessary
@@ -771,7 +778,7 @@
     var p = {};
     var curContext;
     p.use3DContext = false; // default '2d' canvas context
-    p.canvas = curElement;
+    p.canvasElement = curElement;
 
     // Set Processing defaults / environment variables
     p.name = 'Processing.js Instance';
@@ -7127,30 +7134,49 @@
           }
         }
 
+        // XXX: This code is overly complex in order to avoid using with(p) for perf.
         var executeSketch = function(processing) {
-          with(processing) {
-            // Don't start until all specified images in the cache are preloaded
-            if (!pjs.imageCache.pending) {
-              eval(parsedCode);
-
-              // Run void setup()
-              if (setup) {
-                inSetup = true;
-                setup();
-              }
-
-              inSetup = false;
-
-              if (draw) {
-                if (!doLoop) {
-                  redraw();
+          // Don't start until all specified images in the cache are preloaded
+          if (!processing.pjs.imageCache.pending) {
+            (function(aCode, $_ /* XXX: don't change this name, need a name that can't occur in processing/java code */) {
+              // Expose all of p.* to the scope of aCode, but within this closure vs. global.
+              // We have separate event handlers and special-case them later.
+              var all = [], handlers = ['draw','setup','mouseDown','mouseScroll','mouseClicked','mouseDragged','mouseMoved',
+                                        'mousePressed','mouseReleased','mouseScrolled','keyPressed','keyReleased'];
+              for (prop in $_) {
+                if (typeof $_[prop] === 'function') {
+                  // var stroke = p.stroke;
+                  all.push("var " + prop + " = $_['" + prop + "'];");
                 } else {
-                  loop();
+                  // Skip all event handlers, which might be user supplied functions in processing or undefined (default)
+                  if (handlers.indexOf(prop) > -1) {
+                    continue;
+                  }
+                  // Create a getter/setter to wrap variables on p which would otherwise  get copied by value
+                  // (e.g., mouseX = p.mouseX will just copy the value once and not bind to that value).
+                  // We wrap the getter/setter function in a closure so that the current value of prop
+                  // will get bound, vs. the last one when the loop quits.
+                  __defineGetter__(prop, (function(name) { return function()  { return $_[name]; };})(prop));
+                  __defineSetter__(prop, (function(name) { return function(x) { $_[name] = x;    };})(prop));
                 }
               }
-            } else {
-              window.setTimeout(executeSketch, 10, processing);
-            }
+              eval(all.join('') + aCode);
+
+              if ($_.setup) {
+                $_.setup();
+              }
+
+              if ($_.draw) {
+                $_.loop();
+                if (!$_.doLoop) {
+                  $_.redraw();
+                } else {
+                  $_.loop();
+                }
+              }
+            })(parsedCode, processing);
+          } else {
+            window.setTimeout(executeSketch, 10, processing);
           }
         };
 
