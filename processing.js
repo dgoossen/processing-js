@@ -1041,7 +1041,8 @@
       curveToBezierMatrix, 
       curveDrawMatrix, 
       bezierBasisInverse, 
-      bezierBasisMatrix;
+      bezierBasisMatrix,
+      matrixDirty = false;
 
     // User can only have MAX_LIGHTS lights
     var lightCount = 0;
@@ -2851,6 +2852,8 @@
       } else {
         curContext.translate(x, y);
       }
+
+      matrixDirty = true;
     };
 
     p.scale = function scale(x, y, z) {
@@ -2860,6 +2863,8 @@
       } else {
         curContext.scale(x, y || x);
       }
+
+      matrixDirty = true;
     };
 
     p.pushMatrix = function pushMatrix() {
@@ -2899,16 +2904,22 @@
     p.rotateX = function(angleInRadians) {
       forwardTransform.rotateX(angleInRadians);
       reverseTransform.invRotateX(angleInRadians);
+
+      matrixDirty = true;
     };
 
     p.rotateZ = function(angleInRadians) {
       forwardTransform.rotateZ(angleInRadians);
       reverseTransform.invRotateZ(angleInRadians);
+
+      matrixDirty = true;
     };
 
     p.rotateY = function(angleInRadians) {
       forwardTransform.rotateY(angleInRadians);
       reverseTransform.invRotateY(angleInRadians);
+
+      matrixDirty = true;
     };
 
     p.rotate = function rotate(angleInRadians) {
@@ -2918,6 +2929,8 @@
       } else {
         curContext.rotate(angleInRadians);
       }
+
+      matrixDirty = true;
     };
 
     p.pushStyle = function pushStyle() {
@@ -3028,9 +3041,13 @@
         p.camera();
         p.draw();
       } else {
-        p.pushMatrix();
+        curContext.save();
+
         p.draw();
-        p.popMatrix();
+
+        if ( matrixDirty ) {
+          curContext.restore();
+        } 
       }
 
       inDraw = false;
