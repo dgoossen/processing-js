@@ -1024,6 +1024,10 @@
       colorModeX = 255,
       colorModeY = 255,
       colorModeZ = 255,
+      colorModeARatio = 1,
+      colorModeXRatio = 1,
+      colorModeYRatio = 1,
+      colorModeZRatio = 1,
       pathOpen = false,
       mousePressed = false,
       mouseDragging = false,
@@ -2580,6 +2584,69 @@
       }
     };
 
+    p.colorMod = function color(aValue1, aValue2, aValue3, aValue4) {
+      var pjs = p;
+
+      switch( arguments.length ) {
+         case 4:
+            break;
+
+         // 3 arguments: (R, G, B) or (H, S, B)
+         case 3:
+            aValue4 = colorModeA;
+            break;
+
+         case 1:
+            if( typeof aValue1 === 'number') {
+               if( aValue1 <= colorModeX && aValue1 >= 0 ) {
+                  switch( curColorMode ) {
+                     case pjs.RGB: return pjs.color( aValue1, aValue1, aValue1, aValue2 ); break;
+                     case pjs.HSB: return pjs.color( 0, 0, (aValue1 / colorModeX) * colorModeZ, aValue2 ); break;
+                  }
+               } else if( aValue1 ) {
+                  return aValue1;
+               }
+            } else {
+               return pjs.color( colorModeX, colorModeY, colorModeZ, colorModeA );
+            }
+            break;
+
+         // 2 Arguments: (Color, A) or (Grayscale, A)
+         case 2:
+            if( aValue1 & pjs.ALPHA_MASK ) {
+               aValue2 = aValue2 * colorModeARatio;
+               if( aValue2 > 255 ) aValue2 = 255;
+
+               return aValue1 - ( aValue1 & pjs.ALPHA_MASK ) + (( aValue2 << 24 ) & pjs.ALPHA_MASK );
+            } else {
+               switch( curColorMode ) {
+                  case pjs.RGB: return pjs.color( aValue1, aValue1, aValue1, aValue2 ); break;
+                  case pjs.HSB: return pjs.color( 0, 0, (aValue1 / colorModeX) * colorModeZ, aValue2 ); break;
+               }
+            }
+            break;
+   
+         default:
+            return pjs.color( colorModeX, colorModeY, colorModeZ, colorModeA );
+      }
+
+      if (curColorMode === pjs.RGB) {
+         aValue1 = aValue1 * colorModeXRatio & 0xff;
+         aValue2 = aValue2 * colorModeYRatio & 0xff;
+         aValue3 = aValue3 * colorModeZRatio & 0xff;
+      } else {
+         var rgb = pjs.color.toRGB(aValue1, aValue2, aValue3);
+         aValue1 = rgb[0];
+         aValue2 = rgb[1];
+         aValue3 = rgb[2];
+      }
+
+      aValue4 = aValue4 * colorModeARatio & 0xff;
+
+      // Create color int
+      return ( aValue4 << 24 & pjs.ALPHA_MASK ) | ( aValue1 << 16 & pjs.RED_MASK ) | ( aValue2 << 8 & pjs.GREEN_MASK ) | ( aValue3 & pjs.BLUE_MASK );
+    };
+
     p.color = function color(aValue1, aValue2, aValue3, aValue4) {
       var r, g, b, a, rgb, aColor;
 
@@ -2775,9 +2842,15 @@
         colorModeX = range1;
         colorModeY = range2;
         colorModeZ = range3;
+
+        colorModeXRatio = 255 / colorModeX;
+        colorModeYRatio = 255 / colorModeY;
+        colorModeZRatio = 255 / colorModeZ;
       }
       if (arguments.length === 5) {
         colorModeA = range4;
+
+        colorModeARatio = 255 / colorModeA;
       }
       if (arguments.length === 2) {
         p.colorMode(mode, range1, range1, range1, range1);
@@ -2936,6 +3009,10 @@
         'colorModeZ': colorModeZ,
         'colorModeY': colorModeY,
         'colorModeA': colorModeA,
+        'colorModeXRatio': colorModeXRatio,
+        'colorModeZRatio': colorModeZRatio,
+        'colorModeYRatio': colorModeYRatio,
+        'colorModeARatio': colorModeARatio,
         'curTextFont': curTextFont,
         'curTextSize': curTextSize
       };
@@ -2960,6 +3037,10 @@
         colorModeZ = oldState.colorModeZ;
         colorModeY = oldState.colorModeY;
         colorModeA = oldState.colorModeA;
+        colorModeXRatio = oldState.colorModeXRatio;
+        colorModeZRatio = oldState.colorModeZRatio;
+        colorModeYRatio = oldState.colorModeYRatio;
+        colorModeARatio = oldState.colorModeARatio;
         curTextFont = oldState.curTextFont;
         curTextSize = oldState.curTextSize;
       } else {
