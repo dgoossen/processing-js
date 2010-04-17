@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <head>
+      <title>Processing JS</title>
+
+      <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4/jquery.min.js"></script>
+      <script type="text/javascript" src="../../processing.js"></script>
+
+      <script type="text/javascript">
+         var pjs, buffer;
+         var width = 512;
+         var source;
+
+         $( function() {
+            pjs = Processing('panel', '');
+            pjs.size( width, width );
+
+
+
+            function recordTime( callback ) {
+               var start = (new Date()).getTime();
+               callback();
+               var end   = (new Date()).getTime();
+
+               return ( end - start );
+            }
+
+            $('#test').click( function() {
+               var ms;
+               var cycles = 250000;
+
+               var orig = function() {
+                  var len = cycles;
+                  while( len-- ) {
+                     pjs.color( 100, 100, 100, 255 );
+                  }
+               };
+
+               var modified = function() {
+                  var len = cycles;
+                  while( len-- ) {
+                     pjs.colorMod( 100, 100, 100, 255 );
+                  }
+               };
+
+               var compare = function() {
+                  var a, b, count = 0;
+                  var r, g, b;
+                  for( r=0; r < 256; r++ ) {
+                     for( g=0; g < 256; g++ ) {
+                          // way too slow if I enable this...
+//                        for( b=0; b < 256; b++ ) {
+                           a = pjs.color( r, g, r, g );
+                           b = pjs.colorMod( r, g, r, g );
+
+                           if( a != b ) {
+                              count++;
+                           }
+//                        }
+                     }
+                  }
+
+                  pjs.println(count +' differing');
+               };
+
+               ms = recordTime( orig );
+               pjs.println('Original color(): '+ ms +'ms');
+
+               ms = recordTime( modified );
+               pjs.println('Modified color(): '+ ms +'ms');
+
+               compare();
+            });
+         });
+      </script>
+   </head>
+
+   <body>
+      <div id="anchor">
+         <h1>Processing Examples</h1>
+         <p>
+            <input id="test" type="button" value="Test Function" />
+         </p>
+
+         <canvas id="panel"></canvas>
+      </div>
+   </body>
+</html>
