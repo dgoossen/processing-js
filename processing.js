@@ -2585,7 +2585,7 @@
     };
 
     p.colorMod = function color(aValue1, aValue2, aValue3, aValue4) {
-      var pjs = p;
+      var _p = p;
 
       switch( arguments.length ) {
          case 4:
@@ -2600,42 +2600,42 @@
             if( typeof aValue1 === 'number') {
                if( aValue1 <= colorModeX && aValue1 >= 0 ) {
                   switch( curColorMode ) {
-                     case pjs.RGB: return pjs.color( aValue1, aValue1, aValue1, aValue2 ); break;
-                     case pjs.HSB: return pjs.color( 0, 0, (aValue1 / colorModeX) * colorModeZ, aValue2 ); break;
+                     case _p.RGB: return _p.color( aValue1, aValue1, aValue1, aValue2 ); break;
+                     case _p.HSB: return _p.color( 0, 0, (aValue1 / colorModeX) * colorModeZ, aValue2 ); break;
                   }
                } else if( aValue1 ) {
                   return aValue1;
                }
             } else {
-               return pjs.color( colorModeX, colorModeY, colorModeZ, colorModeA );
+               return _p.color( colorModeX, colorModeY, colorModeZ, colorModeA );
             }
             break;
 
          // 2 Arguments: (Color, A) or (Grayscale, A)
          case 2:
-            if( aValue1 & pjs.ALPHA_MASK ) {
+            if( aValue1 & _p.ALPHA_MASK ) {
                aValue2 = aValue2 * colorModeARatio;
                if( aValue2 > 255 ) aValue2 = 255;
 
-               return aValue1 - ( aValue1 & pjs.ALPHA_MASK ) + (( aValue2 << 24 ) & pjs.ALPHA_MASK );
+               return aValue1 - ( aValue1 & _p.ALPHA_MASK ) + (( aValue2 << 24 ) & _p.ALPHA_MASK );
             } else {
                switch( curColorMode ) {
-                  case pjs.RGB: return pjs.color( aValue1, aValue1, aValue1, aValue2 ); break;
-                  case pjs.HSB: return pjs.color( 0, 0, (aValue1 / colorModeX) * colorModeZ, aValue2 ); break;
+                  case _p.RGB: return _p.color( aValue1, aValue1, aValue1, aValue2 ); break;
+                  case _p.HSB: return _p.color( 0, 0, (aValue1 / colorModeX) * colorModeZ, aValue2 ); break;
                }
             }
             break;
    
          default:
-            return pjs.color( colorModeX, colorModeY, colorModeZ, colorModeA );
+            return _p.color( colorModeX, colorModeY, colorModeZ, colorModeA );
       }
 
-      if (curColorMode === pjs.RGB) {
+      if (curColorMode === _p.RGB) {
          aValue1 = aValue1 * colorModeXRatio & 0xff;
          aValue2 = aValue2 * colorModeYRatio & 0xff;
          aValue3 = aValue3 * colorModeZRatio & 0xff;
       } else {
-         var rgb = pjs.color.toRGB(aValue1, aValue2, aValue3);
+         var rgb = _p.color.toRGB(aValue1, aValue2, aValue3);
          aValue1 = rgb[0];
          aValue2 = rgb[1];
          aValue3 = rgb[2];
@@ -2644,7 +2644,7 @@
       aValue4 = aValue4 * colorModeARatio & 0xff;
 
       // Create color int
-      return ( aValue4 << 24 & pjs.ALPHA_MASK ) | ( aValue1 << 16 & pjs.RED_MASK ) | ( aValue2 << 8 & pjs.GREEN_MASK ) | ( aValue3 & pjs.BLUE_MASK );
+      return ( aValue4 << 24 & _p.ALPHA_MASK ) | ( aValue1 << 16 & _p.RED_MASK ) | ( aValue2 << 8 & _p.GREEN_MASK ) | ( aValue3 & _p.BLUE_MASK );
     };
 
     p.color = function color(aValue1, aValue2, aValue3, aValue4) {
