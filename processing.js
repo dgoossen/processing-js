@@ -2568,19 +2568,21 @@
         return (Math.min(((c1 & p.ALPHA_MASK) >>> 24) + f, 0xff) << 24 | (p.peg(ar + (((cr - ar) * f) >> 8)) << 16) | (p.peg(ag + (((cg - ag) * f) >> 8)) << 8) | (p.peg(ab + (((cb - ab) * f) >> 8))));
       },
       burn: function(c1, c2) {
-        var f = (c2 & p.ALPHA_MASK) >>> 24;
-        var ar = (c1 & p.RED_MASK) >> 16;
-        var ag = (c1 & p.GREEN_MASK) >> 8;
-        var ab = (c1 & p.BLUE_MASK);
-        var br = (c2 & p.RED_MASK) >> 16;
-        var bg = (c2 & p.GREEN_MASK) >> 8;
-        var bb = (c2 & p.BLUE_MASK);
+        var _p = p;
+
+        var f  = (c2 & _p.ALPHA_MASK) >>> 24;
+        var ar = (c1 & _p.RED_MASK) >> 16;
+        var ag = (c1 & _p.GREEN_MASK) >> 8;
+        var ab = (c1 & _p.BLUE_MASK);
+        var br = (c2 & _p.RED_MASK) >> 16;
+        var bg = (c2 & _p.GREEN_MASK) >> 8;
+        var bb = (c2 & _p.BLUE_MASK);
         // formula:
-        var cr = (br === 0) ? 0 : 255 - p.peg(((255 - ar) << 8) / br); // division requires pre-peg()-ing
-        var cg = (bg === 0) ? 0 : 255 - p.peg(((255 - ag) << 8) / bg); // "
-        var cb = (bb === 0) ? 0 : 255 - p.peg(((255 - ab) << 8) / bb); // "
+        var cr = (br === 0) ? 0 : 255 - _p.peg(((255 - ar) << 8) / br); // division requires pre-peg()-ing
+        var cg = (bg === 0) ? 0 : 255 - _p.peg(((255 - ag) << 8) / bg); // "
+        var cb = (bb === 0) ? 0 : 255 - _p.peg(((255 - ab) << 8) / bb); // "
         // alpha blend (this portion will always be the same)
-        return (Math.min(((c1 & p.ALPHA_MASK) >>> 24) + f, 0xff) << 24 | (p.peg(ar + (((cr - ar) * f) >> 8)) << 16) | (p.peg(ag + (((cg - ag) * f) >> 8)) << 8) | (p.peg(ab + (((cb - ab) * f) >> 8))));
+        return (Math.min(((c1 & _p.ALPHA_MASK) >>> 24) + f, 0xff) << 24 | (_p.peg(ar + (((cr - ar) * f) >> 8)) << 16) | (_p.peg(ag + (((cg - ag) * f) >> 8)) << 8) | (_p.peg(ab + (((cb - ab) * f) >> 8))));
       }
     };
 
@@ -5918,8 +5920,11 @@
 
       this.toImageData = function() {
         var imgData = Temporary2DContext.createImageData(this.width, this.height);
-        var i, len;
         var dest = imgData.data;
+        var px   = this.pixels;
+        var i = 0, l = px.length;
+        var rMask = p.RED_MASK, gMask = p.GREEN_MASK, bMask = p.BLUE_MASK, aMask = p.ALPHA_MASK;
+
         // this check breaks things once we start changing pimages if we dont 
         //update the ImageData object as well as the pixel array all the time
         //        if (this.ImageData && this.ImageData.width > 0) {
@@ -5929,16 +5934,14 @@
         //            dest[i] = src[i];
         //          }
         //        } else {
-        for (i = 0, len = this.pixels.length; i < len; ++i) {
-          // convert each this.pixels[i] int to array of 4 ints of each color
-          var c = this.pixels[i];
-          var pos = i * 4;
-          // pjs uses argb, canvas stores rgba        
-          dest[pos + 3] = (c >>> 24) & 0xFF;
-          dest[pos + 0] = (c >>> 16) & 0xFF;
-          dest[pos + 1] = (c >>> 8) & 0xFF;
-          dest[pos + 2] = c & 0xFF;
-          //          }
+        while( l-- ) {
+          i = l << 2;
+          c = px[l];
+          dest[i]  = ( c & rMask ) >>> 16 & 0xff;
+          dest[i|1]= ( c & gMask ) >>> 8  & 0xff;
+          dest[i|2]= ( c & bMask )        & 0xff;
+          dest[i|3]= ( c & aMask ) >>> 24 & 0xff;
+          //      }
         }
         // return a canvas ImageData object with pixel array in canvas format
         return imgData;
@@ -5968,14 +5971,26 @@
       this.fromImageData = function(canvasImg) {
         this.width = canvasImg.width;
         this.height = canvasImg.height;
-        this.pixels = new Array(canvasImg.width * canvasImg.height);
+        this.pixels = []; // new Array(canvasImg.width * canvasImg.height);
         this.format = p.ARGB;
+
+        var px = canvasImg.data;
+        var i  = 0, l = px.length >>> 2;
+        var rMask = p.RED_MASK, gMask = p.GREEN_MASK, bMask = p.BLUE_MASK, aMask = p.ALPHA_MASK;
+        var c;
+
+        while( l-- ) {
+           i = l << 2;
+           this.pixels[l] = ( px[i|3] << 24 ) & aMask | ( px[i] << 16 ) & rMask | ( px[i|1] << 8 ) & gMask | ( px[i|2] & bMask );
+        }
+        /*
         for (var i = 0; i < this.pixels.length; i++) {
           // convert each canvasImg's colors to PImage array format
           var pos = i * 4;
           // pjs uses argb, canvas stores rgba
           this.pixels[i] = p.color.toInt(canvasImg.data[pos + 0], canvasImg.data[pos + 1], canvasImg.data[pos + 2], canvasImg.data[pos + 3]);
         }
+        */
       };
 
       this.fromHTMLImageData = function(htmlImg) {
@@ -6130,18 +6145,21 @@
 
     // Paints a pixel array into the canvas
     p.set = function set(x, y, obj, img) {
-      var color, oldFill;
       // PImage.set(x,y,c) was called, set coordinate x,y color to c of img
       if (arguments.length === 4) {
         img.pixels[y * img.width + x] = obj;
       } else if (arguments.length === 3) {
+         var color, oldFill;
+
         // called p.set(), was it with a color or a img ?
-        if (typeof obj === "number") {
-          oldFill = curContext.fillStyle;
+        if( typeof obj === "number") {
+          var ctx = curContext;
+
+          oldFill = ctx.fillStyle;
           color = obj;
-          curContext.fillStyle = p.color.toString(color);
-          curContext.fillRect(Math.round(x), Math.round(y), 1, 1);
-          curContext.fillStyle = oldFill;
+          ctx.fillStyle = p.color.toString(color);
+          ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
+          ctx.fillStyle = oldFill;
         } else if (obj instanceof PImage) {
           p.image(obj, x, y);
         }
@@ -6165,19 +6183,18 @@
         pixels = curContext.createImageData(p.width, p.height);
       }
 
-      var data = pixels.data,
-        pos = 0,
-        defaultColor;
+      var data = pixels.data;
+      var px   = p.pixels;
+      var i = 0, l = px.length;
+      var rMask = p.RED_MASK, gMask = p.GREEN_MASK, bMask = p.BLUE_MASK, aMask = p.ALPHA_MASK;
 
-      for (var i = 0, l = p.pixels.length; i < l; i++) {
-        c = p.pixels[i] ? p.color.toArray(p.pixels[i]) : [0, 0, 0, 255];
-
-        data[pos + 0] = c[0];
-        data[pos + 1] = c[1];
-        data[pos + 2] = c[2];
-        data[pos + 3] = c[3];
-
-        pos += 4;
+      while( l-- ) {
+         i = l << 2;
+         c = px[l];
+         data[i]  = ( c & rMask ) >>> 16 & 0xff;
+         data[i|1]= ( c & gMask ) >>> 8  & 0xff;
+         data[i|2]= ( c & bMask )        & 0xff;
+         data[i|3]= ( c & aMask ) >>> 24 & 0xff;
       }
 
       curContext.putImageData(pixels, 0, 0);
@@ -6404,27 +6421,30 @@
     };
 
     p.filter_bilinear = function filter_bilinear() {
-      p.shared.fracU = p.shared.sX & p.PREC_MAXVAL;
-      p.shared.ifU = p.PREC_MAXVAL - p.shared.fracU;
-      p.shared.ul = (p.shared.ifU * p.shared.ifV) >> p.PRECISIONB;
-      p.shared.ll = (p.shared.ifU * p.shared.fracV) >> p.PRECISIONB;
-      p.shared.ur = (p.shared.fracU * p.shared.ifV) >> p.PRECISIONB;
-      p.shared.lr = (p.shared.fracU * p.shared.fracV) >> p.PRECISIONB;
-      p.shared.u1 = (p.shared.sX >> p.PRECISIONB);
-      p.shared.u2 = Math.min(p.shared.u1 + 1, p.shared.iw1);
+      var _p = p;
+
+      _p.shared.fracU = _p.shared.sX & _p.PREC_MAXVAL;
+      _p.shared.ifU = _p.PREC_MAXVAL - _p.shared.fracU;
+      _p.shared.ul = (_p.shared.ifU * _p.shared.ifV) >> _p.PRECISIONB;
+      _p.shared.ll = (_p.shared.ifU * _p.shared.fracV) >> _p.PRECISIONB;
+      _p.shared.ur = (_p.shared.fracU * _p.shared.ifV) >> _p.PRECISIONB;
+      _p.shared.lr = (_p.shared.fracU * _p.shared.fracV) >> _p.PRECISIONB;
+      _p.shared.u1 = (_p.shared.sX >> _p.PRECISIONB);
+      _p.shared.u2 = Math.min(_p.shared.u1 + 1, _p.shared.iw1);
       // get color values of the 4 neighbouring texels
-      p.shared.cUL = p.shared.srcBuffer[p.shared.v1 + p.shared.u1];
-      p.shared.cUR = p.shared.srcBuffer[p.shared.v1 + p.shared.u2];
-      p.shared.cLL = p.shared.srcBuffer[p.shared.v2 + p.shared.u1];
-      p.shared.cLR = p.shared.srcBuffer[p.shared.v2 + p.shared.u2];
-      p.shared.r = ((p.shared.ul * ((p.shared.cUL & p.RED_MASK) >> 16) + p.shared.ll * ((p.shared.cLL & p.RED_MASK) >> 16) + p.shared.ur * ((p.shared.cUR & p.RED_MASK) >> 16) + p.shared.lr * ((p.shared.cLR & p.RED_MASK) >> 16)) << p.PREC_RED_SHIFT) & p.RED_MASK;
-      p.shared.g = ((p.shared.ul * (p.shared.cUL & p.GREEN_MASK) + p.shared.ll * (p.shared.cLL & p.GREEN_MASK) + p.shared.ur * (p.shared.cUR & p.GREEN_MASK) + p.shared.lr * (p.shared.cLR & p.GREEN_MASK)) >>> p.PRECISIONB) & p.GREEN_MASK;
-      p.shared.b = (p.shared.ul * (p.shared.cUL & p.BLUE_MASK) + p.shared.ll * (p.shared.cLL & p.BLUE_MASK) + p.shared.ur * (p.shared.cUR & p.BLUE_MASK) + p.shared.lr * (p.shared.cLR & p.BLUE_MASK)) >>> p.PRECISIONB;
-      p.shared.a = ((p.shared.ul * ((p.shared.cUL & p.ALPHA_MASK) >>> 24) + p.shared.ll * ((p.shared.cLL & p.ALPHA_MASK) >>> 24) + p.shared.ur * ((p.shared.cUR & p.ALPHA_MASK) >>> 24) + p.shared.lr * ((p.shared.cLR & p.ALPHA_MASK) >>> 24)) << p.PREC_ALPHA_SHIFT) & p.ALPHA_MASK;
-      return p.shared.a | p.shared.r | p.shared.g | p.shared.b;
+      _p.shared.cUL = _p.shared.srcBuffer[_p.shared.v1 + _p.shared.u1];
+      _p.shared.cUR = _p.shared.srcBuffer[_p.shared.v1 + _p.shared.u2];
+      _p.shared.cLL = _p.shared.srcBuffer[_p.shared.v2 + _p.shared.u1];
+      _p.shared.cLR = _p.shared.srcBuffer[_p.shared.v2 + _p.shared.u2];
+      _p.shared.r = ((_p.shared.ul * ((_p.shared.cUL & _p.RED_MASK) >> 16) + _p.shared.ll * ((_p.shared.cLL & _p.RED_MASK) >> 16) + _p.shared.ur * ((_p.shared.cUR & _p.RED_MASK) >> 16) + _p.shared.lr * ((_p.shared.cLR & _p.RED_MASK) >> 16)) << _p.PREC_RED_SHIFT) & _p.RED_MASK;
+      _p.shared.g = ((_p.shared.ul * (_p.shared.cUL & _p.GREEN_MASK) + _p.shared.ll * (_p.shared.cLL & _p.GREEN_MASK) + _p.shared.ur * (_p.shared.cUR & _p.GREEN_MASK) + _p.shared.lr * (_p.shared.cLR & _p.GREEN_MASK)) >>> _p.PRECISIONB) & _p.GREEN_MASK;
+      _p.shared.b = (_p.shared.ul * (_p.shared.cUL & _p.BLUE_MASK) + _p.shared.ll * (_p.shared.cLL & _p.BLUE_MASK) + _p.shared.ur * (_p.shared.cUR & _p.BLUE_MASK) + _p.shared.lr * (_p.shared.cLR & _p.BLUE_MASK)) >>> _p.PRECISIONB;
+      _p.shared.a = ((_p.shared.ul * ((_p.shared.cUL & _p.ALPHA_MASK) >>> 24) + _p.shared.ll * ((_p.shared.cLL & _p.ALPHA_MASK) >>> 24) + _p.shared.ur * ((_p.shared.cUR & _p.ALPHA_MASK) >>> 24) + _p.shared.lr * ((_p.shared.cLR & _p.ALPHA_MASK) >>> 24)) << _p.PREC_ALPHA_SHIFT) & _p.ALPHA_MASK;
+      return _p.shared.a | _p.shared.r | _p.shared.g | _p.shared.b;
     };
 
     p.blit_resize = function blit_resize(img, srcX1, srcY1, srcX2, srcY2, destPixels, screenW, screenH, destX1, destY1, destX2, destY2, mode) {
+      var _p = p;
       var x, y; // iterator vars
       if (srcX1 < 0) {
         srcX1 = 0;
@@ -6450,10 +6470,10 @@
       if (destW <= 0 || destH <= 0 || srcW <= 0 || srcH <= 0 || destX1 >= screenW || destY1 >= screenH || srcX1 >= img.width || srcY1 >= img.height) {
         return;
       }
-      var dx = Math.floor(srcW / destW * p.PRECISIONF);
-      var dy = Math.floor(srcH / destH * p.PRECISIONF);
-      p.shared.srcXOffset = Math.floor(destX1 < 0 ? -destX1 * dx : srcX1 * p.PRECISIONF);
-      p.shared.srcYOffset = Math.floor(destY1 < 0 ? -destY1 * dy : srcY1 * p.PRECISIONF);
+      var dx = Math.floor(srcW / destW * _p.PRECISIONF);
+      var dy = Math.floor(srcH / destH * _p.PRECISIONF);
+      _p.shared.srcXOffset = Math.floor(destX1 < 0 ? -destX1 * dx : srcX1 * _p.PRECISIONF);
+      _p.shared.srcYOffset = Math.floor(destY1 < 0 ? -destY1 * dy : srcY1 * _p.PRECISIONF);
       if (destX1 < 0) {
         destW += destX1;
         destX1 = 0;
@@ -6465,176 +6485,176 @@
       destW = Math.min(destW, screenW - destX1);
       destH = Math.min(destH, screenH - destY1);
       var destOffset = destY1 * screenW + destX1;
-      p.shared.srcBuffer = img.pixels;
+      _p.shared.srcBuffer = img.pixels;
       if (smooth) {
         // use bilinear filtering
-        p.shared.iw = img.width;
-        p.shared.iw1 = img.width - 1;
-        p.shared.ih1 = img.height - 1;
+        _p.shared.iw = img.width;
+        _p.shared.iw1 = img.width - 1;
+        _p.shared.ih1 = img.height - 1;
         switch (mode) {
-        case p.BLEND:
+        case _p.BLEND:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.blend(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.blend(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.ADD:
+        case _p.ADD:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.add(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.add(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.SUBTRACT:
+        case _p.SUBTRACT:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.subtract(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.subtract(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.LIGHTEST:
+        case _p.LIGHTEST:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.lightest(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.lightest(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.DARKEST:
+        case _p.DARKEST:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.darkest(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.darkest(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.REPLACE:
+        case _p.REPLACE:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.filter_bilinear();
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.filter_bilinear();
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.DIFFERENCE:
+        case _p.DIFFERENCE:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.difference(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.difference(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.EXCLUSION:
+        case _p.EXCLUSION:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.exclusion(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.exclusion(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.MULTIPLY:
+        case _p.MULTIPLY:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.multiply(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.multiply(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.SCREEN:
+        case _p.SCREEN:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.screen(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.screen(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.OVERLAY:
+        case _p.OVERLAY:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.overlay(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.overlay(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.HARD_LIGHT:
+        case _p.HARD_LIGHT:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.hard_light(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.hard_light(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.SOFT_LIGHT:
+        case _p.SOFT_LIGHT:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.soft_light(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.soft_light(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.DODGE:
+        case _p.DODGE:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.dodge(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.dodge(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
-        case p.BURN:
+        case _p.BURN:
           for (y = 0; y < destH; y++) {
-            p.filter_new_scanline();
+            _p.filter_new_scanline();
             for (x = 0; x < destW; x++) {
-              destPixels[destOffset + x] = p.modes.burn(destPixels[destOffset + x], p.filter_bilinear());
-              p.shared.sX += dx;
+              destPixels[destOffset + x] = _p.modes.burn(destPixels[destOffset + x], _p.filter_bilinear());
+              _p.shared.sX += dx;
             }
             destOffset += screenW;
-            p.shared.srcYOffset += dy;
+            _p.shared.srcYOffset += dy;
           }
           break;
         }

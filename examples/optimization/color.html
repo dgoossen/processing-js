@@ -13,9 +13,11 @@
          var source;
 
          $( function() {
-            pjs = Processing('panel', '');
+            pjs = Processing('panel', 'void setup() {}');
             pjs.size( width, width );
 
+            source = pjs.loadImage('/processing/images/lena-512.jpg', false, function() {
+            });
 
 
             function recordTime( callback ) {
@@ -26,51 +28,46 @@
                return ( end - start );
             }
 
-            $('#test').click( function() {
+            $('#color').click( function() {
                var ms;
                var cycles = 250000;
 
                var orig = function() {
                   var len = cycles;
                   while( len-- ) {
-                     pjs.color( 100, 100, 100, 255 );
+                     pjs.color( 100, 100, 100, 100 );
                   }
                };
 
                var modified = function() {
                   var len = cycles;
                   while( len-- ) {
-                     pjs.colorMod( 100, 100, 100, 255 );
+                     pjs.colorMod( 100, 100, 100, 100 );
                   }
-               };
-
-               var compare = function() {
-                  var a, b, count = 0;
-                  var r, g, b;
-                  for( r=0; r < 256; r++ ) {
-                     for( g=0; g < 256; g++ ) {
-                          // way too slow if I enable this...
-//                        for( b=0; b < 256; b++ ) {
-                           a = pjs.color( r, g, r, g );
-                           b = pjs.colorMod( r, g, r, g );
-
-                           if( a != b ) {
-                              count++;
-                           }
-//                        }
-                     }
-                  }
-
-                  pjs.println(count +' differing');
                };
 
                ms = recordTime( orig );
-               pjs.println('Original color(): '+ ms +'ms');
+               pjs.println('color(): '+ ms +'ms');
+            });
 
-               ms = recordTime( modified );
-               pjs.println('Modified color(): '+ ms +'ms');
+            $('#loadPixels').click( function() {
+               var ms;
 
-               compare();
+               pjs.image( source, 0, 0 );
+
+               ms = recordTime( function() {
+                  pjs.loadPixels();
+               });
+               pjs.println('loadPixels(): '+ ms +'ms');
+            });
+
+            $('#updatePixels').click( function() {
+               var ms;
+
+               ms = recordTime( function() {
+                  pjs.updatePixels();
+               });
+               pjs.println('updatePixels(): '+ ms +'ms');
             });
          });
       </script>
@@ -80,10 +77,14 @@
       <div id="anchor">
          <h1>Processing Examples</h1>
          <p>
-            <input id="test" type="button" value="Test Function" />
+            <input id="color" type="button" value="color()" />
+            <input id="loadPixels" type="button" value="loadPixels()" />
+            <input id="updatePixels" type="button" value="updatePixels()" />
          </p>
 
          <canvas id="panel"></canvas>
+
+         <img src="/processing/images/lena-512.jpg" alt="" />
       </div>
    </body>
 </html>
